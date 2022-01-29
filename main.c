@@ -1,54 +1,56 @@
-#include<stdio.h>
-#include<unistd.h>
-#include<termios.h>
-#include<stdlib.h>
-#include<ctype.h>
+#include <ctype.h>
+#include <stdio.h>
+#include <errno.h>
+#include <stdlib.h>
+#include <termios.h>
+#include <unistd.h>
+
+/**define**/
+#define CTRL_KEY(k) ((k)& 0x1f)
+
 
 struct termios orig_termios;
 
-void DisableRawMode(){
-    tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
+/**terminal**/
+void die(const char *s)
+{
+    perror(s);
+    exit(1);
 }
 
-void RawMode(){
-    tcgetattr(STDIN_FILENO, &orig_termios);
-    atexit(DisableRawMode);
+void disableRawMode() { 
+    // tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
+    if(tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios)==-1)
+        die("tcsetattr");
+}
 
-    //To disable raw mode at exit.
+void enableRawMode() 
+{
+    // tcgetattr(STDIN_FILENO, &orig_termios);
+    if(tcgetattr(STDIN_FILENO, &orig_termios)==-1)
+        die("tcgetattr");
+    atexit(disableRawMode);
 
-    struct termios raw=orig_termios;
-    raw.c_iflag &= ~(ICRNL | IXON | BRKINT | INPCK | ISTRIP);
+    struct termios raw = orig_termios;
+    raw.c_iflag &= ~(ICRNL| INPCK |ISTRIP| IXON | BRKINT);
     raw.c_oflag &= ~(OPOST);
-    raw.c_cflag != (CS8);
-    raw.c_lflag &= ~(ECHO | ICANON | ISIG | IEXTEN);
+    raw.c_cflag |=(CS8);
+    raw.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
+    if(tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw)==-1)
+        die ("tcsetattr");
+ }
 
-    //timeout for read()
-    raw.c_cc[VMIN] = 0;
-    raw.c_cc[VTIME] = 1;
+ /**init**/
 
-    tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
-}
-
-int main(){
-    //command to enable raw mode
-    RawMode();
-
-    //read() will read 1 byte from input and store in variable c 
-    char c;
-    while(1){
-        char c='\0';
-        read(STDIN_FILENO, &c, 1);
-        if(iscntrl(c)){
-            printf("%d\r\n",c);
-        }
-        else{
-            printf("%d ('%c')\r\n",c,c);
-        }
-        if(c=='q'){
-            break;
-        }
+int main() {
+  enableRawMode();
+  char c;
+  while (read(STDIN_FILENO, &c, 1) == 1 && c != CTRL_KEY('q')) {
+    if (iscntrl(c)) {
+      printf("%d\r\n", c);
+    } else {
+      printf("%d ('%c')\r\n", c, c);
     }
-
-    DisableRawMode();
-    return 0;
+  }
+  return 0;
 }
