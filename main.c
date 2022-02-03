@@ -6,6 +6,16 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <string.h>
+#include <sys/types.h>
+
+//Doubly linked list
+//Datatype for storing  a row
+typedef struct row{
+  int size;
+  char *chars;
+  struct row *prev;
+  struct row *next;
+}row;
 
 /**define**/
 
@@ -27,10 +37,10 @@ struct editorConfig{
   int cx, cy;
   int screenrows;
   int screencols;
+  int no_of_rows;
+  row row;
   struct termios orig_termios;
 }E;
-
-
 
 /**terminal**/
 void die(const char *s)
@@ -64,7 +74,6 @@ void enableRawMode()
         die ("tcsetattr");
  }
 
-//function for reading keypress
 int editorReadKey(){
   int r;
   char c;
@@ -106,6 +115,44 @@ int getWindowSize(int *rows, int *cols){
   }
 }
 
+//file i/o
+void editorOpen(char s[],int n){
+  char line1[1000]="";
+  strcpy(line1,s);
+  ssize_t linelen = n;
+
+  E.row.size = linelen;
+  E.row.chars = malloc(linelen+1);
+  memcpy(E.row.chars, line1, linelen);
+  E.row.chars[linelen] = '\0';
+  E.no_of_rows = 1;
+}
+
+void fileOpen(){
+  FILE *fptr;
+  fptr=fopen("abc.txt","r");
+  if(fptr==NULL){
+    exit(0);
+  }
+  char c=fgetc(fptr);
+  int i=0;
+  char s[1000]="";
+  char s1[1000]="";
+  while(c!=EOF){
+    if(c=='\n'){
+      c=fgetc(fptr);
+      printf("%s\n",s);
+      editorOpen(s,strlen(s));
+      strcpy(s,s1);
+    }
+    else{
+      strncat(s,&c,1);
+      c=fgetc(fptr);
+    }
+  }
+  fclose(fptr);
+}
+
 //append buffer
 struct abuf{
   char *b;
@@ -131,22 +178,31 @@ void abFree(struct abuf *ab){
 void editorRows(struct abuf *ab){
   int y;
   for(y=0;y<E.screenrows;y++){
-    if(y==E.screenrows/3){
-      char welcome[80];
-      int welcomelen = snprintf(welcome, sizeof(welcome),"Desperate times desperate measures %s", PRATIK_PATIL_VERSION);
-      if (welcomelen > E.screencols){
-        welcomelen = E.screencols;
+    if(y>=E.no_of_rows){
+      if(y==E.screenrows/3){
+        char welcome[80];
+        int welcomelen = snprintf(welcome, sizeof(welcome),"Desperate times desperate measures %s", PRATIK_PATIL_VERSION);
+        if (welcomelen > E.screencols){
+          welcomelen = E.screencols;
+        }
+        int padding = (E.screencols - welcomelen) / 2;
+        if (padding) {
+          abAppend(ab, "~", 1);
+          padding--;
+        }
+        while (padding--) abAppend(ab, " ", 1);
+        abAppend(ab, welcome, welcomelen);
       }
-      int padding = (E.screencols - welcomelen) / 2;
-      if (padding) {
+      else{
         abAppend(ab, "~", 1);
-        padding--;
       }
-      while (padding--) abAppend(ab, " ", 1);
-      abAppend(ab, welcome, welcomelen);
     }
     else{
-      abAppend(ab, "~", 1);
+      int len = E.row.size;
+      if(len>E.screencols){
+        len=E.screencols;
+      }
+      abAppend(ab,E.row.chars,len);
     }
 
     abAppend(ab, "\x1b[K", 3);
@@ -237,6 +293,7 @@ void editorKeypress(){
 void initEditor(){
   E.cx = 0;
   E.cy = 0;
+  E.no_of_rows=0;
 
   if(getWindowSize(&E.screenrows,&E.screencols)==-1){
     die("getWindowSize");
@@ -247,6 +304,7 @@ void initEditor(){
 int main() {
   enableRawMode();
   initEditor();
+  fileOpen();
   
   while(1){
     refreshScreen();
