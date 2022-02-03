@@ -8,6 +8,11 @@
 #include <string.h>
 #include <sys/types.h>
 
+struct ll{
+  struct ll *next;
+  char data[1000];
+};
+
 //Doubly linked list
 //Datatype for storing  a row
 typedef struct row{
@@ -41,6 +46,29 @@ struct editorConfig{
   row row;
   struct termios orig_termios;
 }E;
+
+
+struct ll* createll(struct ll* head,char A[1000]){
+  struct ll *first,*t,*last;
+  first=head;
+  last=first;
+  if(first==NULL){
+    first=(struct ll*)malloc(sizeof(struct ll));
+    first->next=NULL;
+    strcpy(first->data,A);
+    last=first;
+  }
+  else{
+    while(last->next!=NULL){
+      last=last->next;
+    }
+    t=(struct ll*)malloc(sizeof(struct ll));
+    t->next=NULL;
+    last->next=t;
+    strcpy(t->data,A);
+  }
+  return first;
+}
 
 /**terminal**/
 void die(const char *s)
@@ -115,17 +143,22 @@ int getWindowSize(int *rows, int *cols){
   }
 }
 
-//file i/o
-void editorOpen(char s[],int n){
-  char line1[1000]="";
-  strcpy(line1,s);
-  ssize_t linelen = n;
+void editorAppendRow(char *s,size_t len){
+  E.row.size=len;
+  E.row.chars=malloc(len+1);
+  memcpy(E.row.chars,s,len);
+  E.row.chars[len]='\0';
+  E.no_of_rows++;
+}
 
-  E.row.size = linelen;
-  E.row.chars = malloc(linelen+1);
-  memcpy(E.row.chars, line1, linelen);
-  E.row.chars[linelen] = '\0';
-  E.no_of_rows = 1;
+//file i/o
+void editorOpen(struct ll *head){
+  editorAppendRow("abcd",4);
+  editorAppendRow("def",3);
+  while(head!=NULL){
+    editorAppendRow(head->data,strlen(head->data));
+    head=head->next;
+  }
 }
 
 void fileOpen(){
@@ -138,18 +171,23 @@ void fileOpen(){
   int i=0;
   char s[1000]="";
   char s1[1000]="";
+  int n=0;
+  struct ll *head;
+  head=NULL;
   while(c!=EOF){
     if(c=='\n'){
       c=fgetc(fptr);
-      printf("%s\n",s);
-      editorOpen(s,strlen(s));
+      head=createll(head,s);
+      //editorOpen(s,strlen(s));
       strcpy(s,s1);
+      n++;
     }
     else{
       strncat(s,&c,1);
       c=fgetc(fptr);
     }
   }
+  editorOpen(head);
   fclose(fptr);
 }
 
@@ -288,7 +326,7 @@ void editorKeypress(){
   }
 }
 
- /**init**/
+/**init**/
 
 void initEditor(){
   E.cx = 0;
@@ -313,4 +351,3 @@ int main() {
 
   return 0;
 }
-
