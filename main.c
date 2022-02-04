@@ -7,6 +7,7 @@
 #include <sys/ioctl.h>
 #include <string.h>
 #include <sys/types.h>
+#include <fcntl.h>
 
 struct ll{
   struct ll *next;
@@ -28,6 +29,7 @@ typedef struct row{
 #define CTRL_KEY(k) ((k)& 0x1f)
 
 enum editorKey {
+  BACKSPACE = 127,
   ARROW_LEFT = 1000,
   ARROW_RIGHT,
   ARROW_UP,
@@ -45,6 +47,7 @@ struct editorConfig{
   int no_of_rows;
   row *row;
   struct termios orig_termios;
+  char filename[1000];
 }E;
 
 
@@ -159,12 +162,66 @@ void editorAppendRow(char *s,size_t len){
   E.no_of_rows++;*/
 }
 
+void editorRowInsertChar(row *row, int at, int c){
+  if(at<0 || at>row->size){
+    at=row->size;
+  }
+  row->chars = realloc(row->chars,row->size+2);
+  memmove(&row->chars[at + 1], &row->chars[at], row->size - at + 1);
+  row->size++;
+  row->chars[at] = c;
+  //editorUpdateRow(row);
+}
+
+void editorInsertChar(int c) {
+  if (E.cy == E.no_of_rows) {
+    editorAppendRow("", 0);
+  }
+  editorRowInsertChar(&E.row[E.cy], E.cx, c);
+  E.cx++;
+}
+
 //file i/o
+char *editorRowsToString(int *buflen) {
+  int totlen = 0;
+  int j;
+  for (j = 0; j < E.no_of_rows; j++)
+    totlen += E.row[j].size + 1;
+  *buflen = totlen;
+  char *buf = malloc(totlen);
+  char *p = buf;
+  for (j = 0; j < E.no_of_rows; j++) {
+    memcpy(p, E.row[j].chars, E.row[j].size);
+    p += E.row[j].size;
+    *p = '\n';
+    p++;
+  }
+  return buf;
+}
+
 void editorOpen(struct ll *head){
   while(head!=NULL){
     editorAppendRow(head->data,strlen(head->data));
     head=head->next;
   }
+}
+
+void editorSave() {
+  if (E.filename == NULL) return;
+  int len;
+  char *buf = editorRowsToString(&len);
+  int fd = open(E.filename, O_RDWR | O_CREAT, 0644);
+  if (fd != -1) {
+    if (ftruncate(fd, len) != -1) {
+      if (write(fd, buf, len) == len) {
+        close(fd);
+        free(buf);
+        return;
+      }
+    }
+    close(fd);
+  }
+  free(buf);
 }
 
 void fileOpen(char filename[1000]){
@@ -316,11 +373,22 @@ void editorKeypress(){
   int c = editorReadKey();
 
   switch(c){
+    case '\r':
+      /* TODO */
+      break;
+
+    case CTRL_KEY('s'):
+      editorSave();
+      break;
+
     case CTRL_KEY('q'):
       write(STDOUT_FILENO, "\x1b[2J", 4);
       write(STDOUT_FILENO, "\x1b[H", 3);
-
       exit(0);
+      break;
+    
+    case BACKSPACE:
+      /* TODO */
       break;
     
     case ARROW_UP:
@@ -328,6 +396,10 @@ void editorKeypress(){
     case ARROW_LEFT:
     case ARROW_RIGHT:
       editorMoveCursor(c);
+      break;
+  
+    default:
+      editorInsertChar(c);
       break;
   }
 }
@@ -350,12 +422,21 @@ int main() {
   printf("Enter the file you want to open - ");
   scanf("%s",filename);
   int num;
-  printf("Enter 1 to view - ");
+  printf("Enter 1 to view or press 2 to type something - ");
   scanf("%d",&num);
   if(num==1){
     enableRawMode();
     initEditor();
     fileOpen(filename);
+    
+    while(1){
+      refreshScreen();
+      editorKeypress();
+    }
+  }
+  if(num==2){
+    enableRawMode();
+    initEditor();
     
     while(1){
       refreshScreen();
