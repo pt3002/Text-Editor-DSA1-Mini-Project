@@ -43,7 +43,7 @@ struct editorConfig{
   int screenrows;
   int screencols;
   int no_of_rows;
-  row row;
+  row *row;
   struct termios orig_termios;
 }E;
 
@@ -144,26 +144,32 @@ int getWindowSize(int *rows, int *cols){
 }
 
 void editorAppendRow(char *s,size_t len){
-  E.row.size=len;
+  E.row = realloc(E.row, sizeof(row) * (E.no_of_rows + 1));
+  int at = E.no_of_rows;
+  E.row[at].size = len;
+  E.row[at].chars = malloc(len + 1);
+  memcpy(E.row[at].chars, s, len);
+  E.row[at].chars[len] = '\0';
+  E.no_of_rows++;
+
+  /*E.row.size=len;
   E.row.chars=malloc(len+1);
   memcpy(E.row.chars,s,len);
   E.row.chars[len]='\0';
-  E.no_of_rows++;
+  E.no_of_rows++;*/
 }
 
 //file i/o
 void editorOpen(struct ll *head){
-  editorAppendRow("abcd",4);
-  editorAppendRow("def",3);
   while(head!=NULL){
     editorAppendRow(head->data,strlen(head->data));
     head=head->next;
   }
 }
 
-void fileOpen(){
+void fileOpen(char filename[1000]){
   FILE *fptr;
-  fptr=fopen("abc.txt","r");
+  fptr=fopen(filename,"r");
   if(fptr==NULL){
     exit(0);
   }
@@ -236,11 +242,11 @@ void editorRows(struct abuf *ab){
       }
     }
     else{
-      int len = E.row.size;
+      int len = E.row[y].size;
       if(len>E.screencols){
         len=E.screencols;
       }
-      abAppend(ab,E.row.chars,len);
+      abAppend(ab,E.row[y].chars,len);
     }
 
     abAppend(ab, "\x1b[K", 3);
@@ -340,14 +346,21 @@ void initEditor(){
 
 
 int main() {
-  enableRawMode();
-  initEditor();
-  fileOpen();
-  
-  while(1){
-    refreshScreen();
-    editorKeypress();
+  char filename[1000];
+  printf("Enter the file you want to open - ");
+  scanf("%s",filename);
+  int num;
+  printf("Enter 1 to view - ");
+  scanf("%d",&num);
+  if(num==1){
+    enableRawMode();
+    initEditor();
+    fileOpen(filename);
+    
+    while(1){
+      refreshScreen();
+      editorKeypress();
+    }
   }
-
   return 0;
 }
