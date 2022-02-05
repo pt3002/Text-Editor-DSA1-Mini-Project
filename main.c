@@ -276,6 +276,20 @@ void abFree(struct abuf *ab){
 }
 
 /***output***/
+void editorDrawStatusBar(struct abuf *ab) {
+  abAppend(ab, "\x1b[7m", 4);
+  char status[80];
+  int len = snprintf(status, sizeof(status), "%.20s - %d lines",
+    E.filename ? E.filename : "[No Name]", E.no_of_rows);
+  if (len > E.screencols) len = E.screencols;
+  abAppend(ab, status, len);
+  while (len < E.screencols) {
+    abAppend(ab, " ", 1);
+    len++;
+  }
+  abAppend(ab, "\x1b[m", 3);
+}
+
 void editorRows(struct abuf *ab){
   int y;
   for(y=0;y<E.screenrows;y++){
@@ -309,9 +323,8 @@ void editorRows(struct abuf *ab){
     abAppend(ab, "\x1b[K", 3);
 
     //for getting tilde on last line
-    if(y<E.screenrows-1){
-      abAppend(ab, "\r\n", 2);
-    }
+    abAppend(ab, "\r\n", 2);
+    
   }
 }
 
@@ -323,6 +336,7 @@ void refreshScreen(){
   abAppend(&ab, "\x1b[H", 3);
 
   editorRows(&ab);
+  editorDrawStatusBar(&ab);
 
   char buf[32];
   snprintf(buf, sizeof(buf), "\x1b[%d;%dH", E.cy + 1, E.cx + 1);
@@ -414,6 +428,7 @@ void initEditor(){
   if(getWindowSize(&E.screenrows,&E.screencols)==-1){
     die("getWindowSize");
   }
+  E.screenrows -= 1;
 }
 
 
@@ -427,6 +442,7 @@ int main() {
   if(num==1){
     enableRawMode();
     initEditor();
+    strcpy(E.filename,filename);
     fileOpen(filename);
     
     while(1){
