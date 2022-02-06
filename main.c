@@ -182,7 +182,7 @@ void editorInsertChar(int c) {
 }
 
 //file i/o
-char *editorRowsToString(int *buflen) {
+/*char *editorRowsToString(int *buflen) {
   int totlen = 0;
   int j;
   for (j = 0; j < E.no_of_rows; j++)
@@ -197,7 +197,7 @@ char *editorRowsToString(int *buflen) {
     p++;
   }
   return buf;
-}
+}*/
 
 void editorOpen(struct ll *head){
   while(head!=NULL){
@@ -206,23 +206,36 @@ void editorOpen(struct ll *head){
   }
 }
 
+void saving_to_file(struct ll *head,char filename[1000]){
+  FILE *fp=fopen(filename,"w");
+  while(head!=NULL){
+    fprintf(fp,"%s\n",head->data);
+    head=head->next;
+  }
+  fclose(fp);
+}
+
 void editorSave() {
   if (E.filename == NULL) return;
-  int len;
-  char *buf = editorRowsToString(&len);
-  int fd = open(E.filename, O_RDWR | O_CREAT, 0644);
-  if (fd != -1) {
-    if (ftruncate(fd, len) != -1) {
-      if (write(fd, buf, len) == len) {
-        close(fd);
-        free(buf);
-        return;
-      }
+  else{
+    struct ll* line1;
+    line1=NULL;
+    int n=E.no_of_rows;
+    int i=0;
+    int len;
+    char s[1000];
+    char filename[1000];
+    while(i<n){
+      strcpy(s,E.row[i].chars);
+      line1=createll(line1,s);
+      i++;
     }
-    close(fd);
+    strcpy(filename,E.filename);
+    saving_to_file(line1,filename);
   }
-  free(buf);
 }
+
+
 
 void fileOpen(char filename[1000]){
   FILE *fptr;
@@ -451,6 +464,7 @@ int main() {
     }
   }
   if(num==2){
+    strcpy(E.filename,filename);
     enableRawMode();
     initEditor();
     
