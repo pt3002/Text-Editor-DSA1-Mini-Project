@@ -9,6 +9,14 @@
 #include <sys/types.h>
 #include <fcntl.h>
 
+// Colors 
+#define RED  "\x1B[31m"
+#define GREEN  "\x1B[32m"
+#define YELLOW  "\x1B[33m"
+#define BLUE  "\x1B[34m"
+#define MAGENTA  "\x1B[35m"
+#define CYAN  "\x1B[36m"
+
 struct ll{
   struct ll *next;
   char data[1000];
@@ -21,6 +29,8 @@ typedef struct row{
   char *chars;
   struct row *prev;
   struct row *next;
+  char *render;
+  int rsize;
 }row;
 
 /**define**/
@@ -73,7 +83,35 @@ struct ll* createll(struct ll* head,char A[1000]){
   return first;
 }
 
-/**terminal**/
+//Displaying starting message
+void welcome_message(){
+    printf("\n");
+    printf("\t\t\t\t\t\t\t  Welcome to PRATIK'S TEXT EDITOR ! \n\n");
+    printf("\t\t\t\t\t\t\t    Please see codes given below\n");
+    printf("\n");
+    printf("%s\t\t\t\t -------------------------------------------------------------------------------------- \n",CYAN);
+    printf("%s\t\t\t\t|                            |                            |                            |\n",CYAN);
+    printf("%s\t\t\t\t|",CYAN);
+    printf("%s        READ A FILE         ",MAGENTA);
+    printf("%s|",CYAN);
+    printf("%s     CREATE A NEW FILE      ",MAGENTA);
+    printf("%s|",CYAN);
+    printf("%s    OPEN AN EXISTING FILE   ",MAGENTA);
+    printf("%s|\n",CYAN);
+    printf("%s\t\t\t\t|                            |                            |                            |\n",CYAN);
+    printf("%s\t\t\t\t|--------------------------------------------------------------------------------------|\n",CYAN);
+    printf("%s\t\t\t\t|                            |                            |                            |\n",CYAN);
+    printf("%s\t\t\t\t|",CYAN);
+    printf("%s             1              ",MAGENTA);
+    printf("%s|",CYAN);
+    printf("%s             2              ",MAGENTA);
+    printf("%s|",CYAN);
+    printf("%s             3              ",MAGENTA);
+    printf("%s|\n",CYAN);
+    printf("%s\t\t\t\t|                            |                            |                            |\n",CYAN);
+    printf("\t\t\t\t|--------------------------------------------------------------------------------------|\n");
+}
+
 void die(const char *s)
 {
     write(STDOUT_FILENO, "\x1b[2J", 4);
@@ -145,6 +183,33 @@ int getWindowSize(int *rows, int *cols){
     *rows=ws.ws_row;
   }
 }
+void editorUpdateRow(row *row) {
+  free(row->render);
+  row->render = malloc(row->size + 1);
+  int j;
+  int idx = 0;
+  for (j = 0; j < row->size; j++) {
+    row->render[idx++] = row->chars[j];
+  }
+  row->render[idx] = '\0';
+  row->rsize = idx;
+}
+
+void editorRowDelChar(row *row, int at) {
+  if (at < 0 || at >= row->size) return;
+  memmove(&row->chars[at], &row->chars[at + 1], row->size - at);
+  row->size--;
+  editorUpdateRow(row); 
+}
+
+void editorDelChar() {
+  if (E.cy == E.no_of_rows) return;
+  row *row = &E.row[E.cy];
+  if (E.cx > 0) {
+    editorRowDelChar(row, E.cx - 1);
+    E.cx--;
+  }
+}
 
 void editorAppendRow(char *s,size_t len){
   E.row = realloc(E.row, sizeof(row) * (E.no_of_rows + 1));
@@ -154,6 +219,9 @@ void editorAppendRow(char *s,size_t len){
   memcpy(E.row[at].chars, s, len);
   E.row[at].chars[len] = '\0';
   E.no_of_rows++;
+
+  E.row[at].rsize = 0;
+  E.row[at].render = NULL;
 
   /*E.row.size=len;
   E.row.chars=malloc(len+1);
@@ -415,7 +483,7 @@ void editorKeypress(){
       break;
     
     case BACKSPACE:
-      /* TODO */
+      editorDelChar();
       break;
     
     case ARROW_UP:
@@ -446,6 +514,7 @@ void initEditor(){
 
 
 int main() {
+  //welcome_message();
   char filename[1000];
   printf("Enter the file you want to open - ");
   scanf("%s",filename);
@@ -475,3 +544,4 @@ int main() {
   }
   return 0;
 }
+
