@@ -36,6 +36,7 @@ typedef struct row{
 
 
 /**Function Declaration*/
+struct ll* createll(struct ll* head,char A[1000]);
 void welcome_message();
 void die(const char *s);
 void disableRawMode();
@@ -67,7 +68,8 @@ void editorOpen(struct ll *head);
 #define PRATIK_PATIL_VERSION "104"
 #define CTRL_KEY(k) ((k)& 0x1f)
 
-int dirty_flag=0;
+int dirty_flag=0;   //0==>Ready to write    100==>Pressed CTRL+S    //200==>CTRL+Q without saving   
+int quit_flag=0;    //0==>File Not saved yet      1==>file Saved
 
 enum editorKey {
   BACKSPACE = 127,
@@ -334,6 +336,7 @@ void editorSave() {
     saving_to_file(line1,filename);
   }
   dirty_flag=100;
+  quit_flag=1;
 }
 
 
@@ -387,6 +390,7 @@ void abFree(struct abuf *ab){
 
 /***output***/
 void editorDrawStatusBar(struct abuf *ab) {
+      //Message for Normal writing
   if(dirty_flag!=100 && dirty_flag!=200){
     abAppend(ab, "\x1b[7m", 4);
     char status[80];
@@ -400,11 +404,11 @@ void editorDrawStatusBar(struct abuf *ab) {
     }
     abAppend(ab, "\x1b[m", 3);
   }
-  if(dirty_flag==100){
+      //Message for Saving
+  else if(dirty_flag==100){
     abAppend(ab, "\x1b[7m", 4);
     char status[80];
-    int len = snprintf(status, sizeof(status), "%.20s - %d lines written to the disk",
-      E.filename ? E.filename : "[No Name]", E.no_of_rows);
+    int len = snprintf(status, sizeof(status), "Saved Succesfully");
     if (len > E.screencols) len = E.screencols;
     abAppend(ab, status, len);
     while (len < E.screencols) {
@@ -414,11 +418,11 @@ void editorDrawStatusBar(struct abuf *ab) {
     abAppend(ab, "\x1b[m", 3);
     dirty_flag=0;
   }
-  if(dirty_flag==200){
+      //Quiting without Saving the file(Warning)
+  else if(quit_flag==0){
     abAppend(ab, "\x1b[7m", 4);
     char status[80];
-    int len = snprintf(status, sizeof(status), "%.20s - %d Please save before quitting !!!",
-      E.filename ? E.filename : "[No Name]", E.no_of_rows);
+    int len = snprintf(status, sizeof(status), "Please save before quitting !!!");
     if (len > E.screencols) len = E.screencols;
     abAppend(ab, status, len);
     while (len < E.screencols) {
@@ -535,16 +539,13 @@ void editorKeypress(){
     case CTRL_KEY('s'):
       editorSave();
       break;
-
-    
-
+      
     case CTRL_KEY('q'):
       write(STDOUT_FILENO, "\x1b[2J", 4);
       write(STDOUT_FILENO, "\x1b[H", 3);
-      if(dirty_flag==100){
-        dirty_flag=200;
-      }
-      else{
+      if(quit_flag==1)
+      {
+
         exit(0);
       }
       break;
