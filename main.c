@@ -11,6 +11,7 @@
 
 //Hello
 
+<<<<<<< HEAD
 /**Struct Declaration**/
 //append buffer
 struct abuf{
@@ -18,6 +19,8 @@ struct abuf{
   int len;
 };
 
+=======
+>>>>>>> 269de1b1ca48d152f8b32ca8d24f6f02148959d3
 struct ll{
   struct ll *next;
   char data[1000];
