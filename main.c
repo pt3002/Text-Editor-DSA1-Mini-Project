@@ -9,14 +9,6 @@
 #include <sys/types.h>
 #include <fcntl.h>
 
-// Colors 
-#define RED  "\x1B[31m"
-#define GREEN  "\x1B[32m"
-#define YELLOW  "\x1B[33m"
-#define BLUE  "\x1B[34m"
-#define MAGENTA  "\x1B[35m"
-#define CYAN  "\x1B[36m"
-
 struct ll{
   struct ll *next;
   char data[1000];
@@ -89,27 +81,28 @@ void welcome_message(){
     printf("\t\t\t\t\t\t\t  Welcome to PRATIK'S TEXT EDITOR ! \n\n");
     printf("\t\t\t\t\t\t\t    Please see codes given below\n");
     printf("\n");
-    printf("%s\t\t\t\t -------------------------------------------------------------------------------------- \n",CYAN);
-    printf("%s\t\t\t\t|                            |                            |                            |\n",CYAN);
-    printf("%s\t\t\t\t|",CYAN);
-    printf("%s        READ A FILE         ",MAGENTA);
-    printf("%s|",CYAN);
-    printf("%s     CREATE A NEW FILE      ",MAGENTA);
-    printf("%s|",CYAN);
-    printf("%s    OPEN AN EXISTING FILE   ",MAGENTA);
-    printf("%s|\n",CYAN);
-    printf("%s\t\t\t\t|                            |                            |                            |\n",CYAN);
-    printf("%s\t\t\t\t|--------------------------------------------------------------------------------------|\n",CYAN);
-    printf("%s\t\t\t\t|                            |                            |                            |\n",CYAN);
-    printf("%s\t\t\t\t|",CYAN);
-    printf("%s             1              ",MAGENTA);
-    printf("%s|",CYAN);
-    printf("%s             2              ",MAGENTA);
-    printf("%s|",CYAN);
-    printf("%s             3              ",MAGENTA);
-    printf("%s|\n",CYAN);
-    printf("%s\t\t\t\t|                            |                            |                            |\n",CYAN);
+    printf("\t\t\t\t -------------------------------------------------------------------------------------- \n");
+    printf("\t\t\t\t|                            |                            |                            |\n");
+    printf("\t\t\t\t|");
+    printf("        READ A FILE         ");
+    printf("|");
+    printf("     CREATE A NEW FILE      ");
+    printf("|");
+    printf("    OPEN AN EXISTING FILE   ");
+    printf("|\n");
+    printf("\t\t\t\t|                            |                            |                            |\n");
     printf("\t\t\t\t|--------------------------------------------------------------------------------------|\n");
+    printf("\t\t\t\t|                            |                            |                            |\n");
+    printf("\t\t\t\t|");
+    printf("             1              ");
+    printf("|");
+    printf("             2              ");
+    printf("|");
+    printf("             3              ");
+    printf("|\n");
+    printf("\t\t\t\t|                            |                            |                            |\n");
+    printf("\t\t\t\t -------------------------------------------------------------------------------------- \n");
+    printf("\n\n");
 }
 
 void die(const char *s)
@@ -514,34 +507,105 @@ void initEditor(){
 
 
 int main() {
-  //welcome_message();
+  welcome_message();
+  int code;
   char filename[1000];
-  printf("Enter the file you want to open - ");
-  scanf("%s",filename);
-  int num;
-  printf("Enter 1 to view or press 2 to type something - ");
-  scanf("%d",&num);
-  if(num==1){
-    enableRawMode();
-    initEditor();
-    strcpy(E.filename,filename);
-    fileOpen(filename);
+  char a;
+  printf("Enter the code - ");
+  scanf("%d",&code);
+  if(code==1){
+    printf("Enter the file you want to read - ");
+    scanf("%s",filename);
+    FILE *fp;
+    fp=fopen(filename,"r");
+    if(fp==NULL){
+      printf("No such file exists !\n");
+      fclose(fp);
+      exit(0);
+    }
+    else{
+      fclose(fp);
+      enableRawMode();
+      initEditor();
+      strcpy(E.filename,filename);
+      fileOpen(filename);
     
-    while(1){
-      refreshScreen();
-      editorKeypress();
+      while(1){
+        refreshScreen();
+        editorKeypress();
+      }
     }
   }
-  if(num==2){
-    strcpy(E.filename,filename);
-    enableRawMode();
-    initEditor();
+  else if(code==2){
+    printf("Please enter your new file's name - ");
+    scanf("%s",filename);
+    FILE *fp;
+    fp=fopen(filename,"r");
+    if(fp==NULL){
+      fp=fopen(filename,"w");
+      fclose(fp);
+      enableRawMode();
+      initEditor();
+      strcpy(E.filename,filename);
+      fileOpen(filename);
     
-    while(1){
-      refreshScreen();
-      editorKeypress();
+      while(1){
+        refreshScreen();
+        editorKeypress();
+      }
+      return 0;
     }
+    printf("File with this name already exists !\n");
+    printf("Do you want to replace it ? (Y/N) - ");
+    scanf("%c",&a);
+    
+      //fclose(fp);
+      
+      if(a=='Y'){
+        fclose(fopen(filename, "w"));
+        fclose(fp);
+        enableRawMode();
+        initEditor();
+        strcpy(E.filename,filename);
+        fileOpen(filename);
+    
+        while(1){
+          refreshScreen();
+          editorKeypress();
+        }
+      }
+      else{
+        printf("Okay new file was not created !");
+        exit(0);
+      }
+    
   }
-  return 0;
+  // char filename[1000];
+  // printf("Enter the file you want to open - ");
+  // scanf("%s",filename);
+  // int num;
+  // printf("Enter 1 to view or press 2 to type something - ");
+  // scanf("%d",&num);
+  // if(num==1){
+  //   enableRawMode();
+  //   initEditor();
+  //   strcpy(E.filename,filename);
+  //   fileOpen(filename);
+    
+  //   while(1){
+  //     refreshScreen();
+  //     editorKeypress();
+  //   }
+  // }
+  // if(num==2){
+  //   strcpy(E.filename,filename);
+  //   enableRawMode();
+  //   initEditor();
+    
+  //   while(1){
+  //     refreshScreen();
+  //     editorKeypress();
+  //   }
+  // }
 }
 
