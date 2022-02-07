@@ -8,8 +8,9 @@
 #include <string.h>
 #include <sys/types.h>
 #include <fcntl.h>
+#include <stdarg.h>
+#include<time.h>>
 
-//Hello
 
 /**Struct Declaration**/
 //append buffer
@@ -33,6 +34,19 @@ typedef struct row{
   char *render;
   int rsize;
 }row;
+
+struct termios orig_termios;
+
+//global struct which will contain width and height of terminal
+struct editorConfig{
+  int cx, cy;
+  int screenrows;
+  int screencols;
+  int no_of_rows;
+  row *row;
+  struct termios orig_termios;
+  char filename[1000];
+}E;
 
 
 /**Function Declaration*/
@@ -61,12 +75,10 @@ void editorSave();
 void saving_to_file(struct ll *head,char filename[1000]);
 void editorOpen(struct ll *head);
 
-
-
 /**define**/
-
 #define PRATIK_PATIL_VERSION "104"
 #define CTRL_KEY(k) ((k)& 0x1f)
+#define ABUF_INIT {NULL, 0}
 
 int dirty_flag=0;   //0==>Ready to write    100==>Pressed CTRL+S    //200==>CTRL+Q without saving   
 int quit_flag=0;    //0==>File Not saved yet      1==>file Saved
@@ -79,20 +91,6 @@ enum editorKey {
   ARROW_DOWN,
   DEL_KEY
 };
-
-struct termios orig_termios;
-
-//global struct which will contain width and height of terminal
-struct editorConfig{
-  int cx, cy;
-  int screenrows;
-  int screencols;
-  int no_of_rows;
-  row *row;
-  struct termios orig_termios;
-  char filename[1000];
-}E;
-
 
 struct ll* createll(struct ll* head,char A[1000]){
   struct ll *first,*t,*last;
@@ -281,6 +279,7 @@ void editorInsertChar(int c) {
   }
   editorRowInsertChar(&E.row[E.cy], E.cx, c);
   E.cx++;
+  quit_flag=0;
 }
 
 //file i/o
@@ -339,8 +338,6 @@ void editorSave() {
   quit_flag=1;
 }
 
-
-
 void fileOpen(char filename[1000]){
   FILE *fptr;
   fptr=fopen(filename,"r");
@@ -371,10 +368,6 @@ void fileOpen(char filename[1000]){
   fclose(fptr);
 }
 
-
-
-#define ABUF_INIT {NULL, 0}
-
 void abAppend(struct abuf *ab, const char *s, int len){
   char *new = realloc(ab->b, ab->len+len);
 
@@ -389,13 +382,12 @@ void abFree(struct abuf *ab){
 }
 
 /***output***/
-void editorDrawStatusBar(struct abuf *ab) {
-      //Message for Normal writing
-  if(dirty_flag!=100 && dirty_flag!=200){
+void editorDrawStatusBar(struct abuf *ab){
+      //Quiting without Saving the file(Warning)
+    if(quit_flag==0 && dirty_flag==200){
     abAppend(ab, "\x1b[7m", 4);
     char status[80];
-    int len = snprintf(status, sizeof(status), "%.20s - %d lines",
-      E.filename ? E.filename : "[No Name]", E.no_of_rows);
+    int len = snprintf(status, sizeof(status), "Please save before quitting !!!");
     if (len > E.screencols) len = E.screencols;
     abAppend(ab, status, len);
     while (len < E.screencols) {
@@ -403,9 +395,10 @@ void editorDrawStatusBar(struct abuf *ab) {
       len++;
     }
     abAppend(ab, "\x1b[m", 3);
+    dirty_flag=0;
   }
-      //Message for Saving
-  else if(dirty_flag==100){
+        //Message for Saving
+    if(dirty_flag==100){
     abAppend(ab, "\x1b[7m", 4);
     char status[80];
     int len = snprintf(status, sizeof(status), "Saved Succesfully");
@@ -418,11 +411,12 @@ void editorDrawStatusBar(struct abuf *ab) {
     abAppend(ab, "\x1b[m", 3);
     dirty_flag=0;
   }
-      //Quiting without Saving the file(Warning)
-  else if(quit_flag==0){
+      //Message for Normal writing
+    else{
     abAppend(ab, "\x1b[7m", 4);
     char status[80];
-    int len = snprintf(status, sizeof(status), "Please save before quitting !!!");
+    int len = snprintf(status, sizeof(status), "%.20s - %d lines",
+      E.filename ? E.filename : "[No Name]", E.no_of_rows);
     if (len > E.screencols) len = E.screencols;
     abAppend(ab, status, len);
     while (len < E.screencols) {
@@ -430,7 +424,6 @@ void editorDrawStatusBar(struct abuf *ab) {
       len++;
     }
     abAppend(ab, "\x1b[m", 3);
-    dirty_flag=0;
   }
   
 }
@@ -543,10 +536,11 @@ void editorKeypress(){
     case CTRL_KEY('q'):
       write(STDOUT_FILENO, "\x1b[2J", 4);
       write(STDOUT_FILENO, "\x1b[H", 3);
-      if(quit_flag==1)
-      {
-
+      if(quit_flag==1){
         exit(0);
+      }
+      else{
+        dirty_flag=200;
       }
       break;
     
