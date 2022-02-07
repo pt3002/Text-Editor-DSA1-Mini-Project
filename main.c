@@ -9,6 +9,8 @@
 #include <sys/types.h>
 #include <fcntl.h>
 
+//Hello
+
 struct ll{
   struct ll *next;
   char data[1000];
