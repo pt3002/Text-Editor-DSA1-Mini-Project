@@ -93,7 +93,8 @@ void precal();
 void build_hash(char *s);
 int get_hash(int x, int y);
 int final_hash(char *s);
-int rabinKarp(char *text, char *pattern);
+void rabinKarp(char *text, char *pattern);
+void changehead(char filename[1000]);
 
 /**define**/
 #define PRATIK_PATIL_VERSION "104"
@@ -115,6 +116,9 @@ const int N = 1e7;
 int *pw = NULL;
 int *inv = NULL;
 int *has = NULL;
+int rk=0; //0-> not found    //1->found
+int position = -1;   //-1->Not found on any position   //any other no. if it is found
+int row_number = -1;    //-1 -> Not found on any row          //any other no. if found 
 
 enum editorKey
 {
@@ -162,11 +166,11 @@ void welcome_message()
   printf("\t\t\t\t -------------------------------------------------------------------------------------- \n");
   printf("\t\t\t\t|                            |                            |                            |\n");
   printf("\t\t\t\t|");
-  printf("        READ A FILE         ");
+  printf("    OPEN AN EXISTING FILE   ");
   printf("|");
   printf("     CREATE A NEW FILE      ");
   printf("|");
-  printf("    OPEN AN EXISTING FILE   ");
+  printf("         TO EXIT            ");
   printf("|\n");
   printf("\t\t\t\t|                            |                            |                            |\n");
   printf("\t\t\t\t|--------------------------------------------------------------------------------------|\n");
@@ -429,9 +433,44 @@ void editorSave()
     }
     strcpy(filename, E.filename);
     saving_to_file(line1, filename);
+    changehead(E.filename);
   }
   dirty_flag = 100;
   quit_flag = 1;
+}
+
+void changehead(char filename[1000]){
+  FILE *fptr;
+  fptr = fopen(filename, "r");
+  if (fptr == NULL)
+  {
+    exit(0);
+  }
+  char c = fgetc(fptr);
+  int i = 0;
+  char s[1000] = "";
+  char s1[1000] = "";
+  int n = 0;
+  struct ll *head;
+  head = NULL;
+  while (c != EOF)
+  {
+    if (c == '\n')
+    {
+      c = fgetc(fptr);
+      head = createll(head, s);
+      // editorOpen(s,strlen(s));
+      strcpy(s, s1);
+      n++;
+    }
+    else
+    {
+      strncat(s, &c, 1);
+      c = fgetc(fptr);
+    }
+  }
+  temphead = head;
+  fclose(fptr);
 }
 
 void fileOpen(char filename[1000])
@@ -918,7 +957,7 @@ int final_hash(char *s)
   return res;
 }
 
-int rabinKarp(char *text, char *pattern)
+void rabinKarp(char *text, char *pattern)
 {
 
   int hash_of_pattern = final_hash(pattern);
@@ -929,13 +968,13 @@ int rabinKarp(char *text, char *pattern)
   {
     if (hash_of_pattern == get_hash(i, i + m - 1))
     {
-      // printf("Found at %d",i);
-      editorSetStatusMessage("Found");
-      return 1;
+      rk=1;
+      //editorSetStatusMessage("i am here");
+      position=i;
+      return;
     }
   }
-  editorSetStatusMessage("Not Found");
-  return 0;
+  //editorSetStatusMessage("Not Found");
 }
 
 void editorFind()
@@ -944,12 +983,34 @@ void editorFind()
   if (query == NULL)
     return;
   struct ll *rowline = temphead;
-  int find_flag = 0;
-  while (rowline != NULL && find_flag == 0)
+  editorSetStatusMessage("%s-%s",query,rowline->data);
+  rabinKarp(query,rowline->data);
+  //rabinKarp(query,rowline->data);
+  int i=0;
+  while (rowline != NULL && position==-1)
   {
-    find_flag = rabinKarp(query, rowline->data);
-    rowline = rowline->next;
+      rabinKarp(rowline->data,query);
+      i++;
+      rowline = rowline->next;
   }
+  if(rk==1){
+      row_number=i;
+      editorSetStatusMessage("FOUND!! at %d row and %d position",row_number,position);
+  }
+  else{
+      editorSetStatusMessage("NOT FOUND!!");
+  }
+  // while(rowline!=NULL){
+  //   if(find_flag==0){
+  //     find_flag=rabinKarp(query,rowline->data);
+  //   }
+  //   if(find_flag!=0){
+  //     editorSetStatusMessage("Found in row");
+  //     return;
+  //   }
+  //   r++;
+  //   rowline=rowline->next;
+  // }
 
   free(query);
 }
@@ -976,6 +1037,7 @@ int main()
   inv = calloc(N, sizeof(int));
   has = calloc(N, sizeof(int));
   precal();
+
   welcome_message();
   int code;
   char filename[1000];
@@ -984,15 +1046,15 @@ int main()
   scanf("%d", &code);
   if (code == 1)
   {
-    printf("Enter the file you want to read - ");
+    printf("Enter the file you want to open - ");
     scanf("%s", filename);
     FILE *fp;
     fp = fopen(filename, "r");
     if (fp == NULL)
     {
       printf("No such file exists !\n");
-      fclose(fp);
       exit(0);
+      fclose(fp);
     }
     else
     {
@@ -1031,58 +1093,13 @@ int main()
       }
       return 0;
     }
-    printf("File with this name already exists !\n");
-    printf("Do you want to replace it ? (Y/N) - ");
-    scanf("%c", &a);
-
-    // fclose(fp);
-
-    if (a == 'Y')
-    {
-      fclose(fopen(filename, "w"));
+    else{
+      printf("File already exists!");
       fclose(fp);
-      enableRawMode();
-      initEditor();
-      strcpy(E.filename, filename);
-      fileOpen(filename);
-
-      while (1)
-      {
-        refreshScreen();
-        editorKeypress();
-      }
-    }
-    else
-    {
-      printf("Okay new file was not created !");
-      exit(0);
     }
   }
-  // char filename[1000];
-  // printf("Enter the file you want to open - ");
-  // scanf("%s",filename);
-  // int num;
-  // printf("Enter 1 to view or press 2 to type something - ");
-  // scanf("%d",&num);
-  // if(num==1){
-  //   enableRawMode();
-  //   initEditor();
-  //   strcpy(E.filename,filename);
-  //   fileOpen(filename);
-
-  //   while(1){
-  //     refreshScreen();
-  //     editorKeypress();
-  //   }
-  // }
-  // if(num==2){
-  //   strcpy(E.filename,filename);
-  //   enableRawMode();
-  //   initEditor();
-
-  //   while(1){
-  //     refreshScreen();
-  //     editorKeypress();
-  //   }
-  // }
+  else{
+      exit(0);
+  }
+  return 0;
 }
