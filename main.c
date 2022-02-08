@@ -116,9 +116,9 @@ const int N = 1e7;
 int *pw = NULL;
 int *inv = NULL;
 int *has = NULL;
-int rk=0; //0-> not found    //1->found
+int rk = 0;          // 0-> not found    //1->found
 int position = -1;   //-1->Not found on any position   //any other no. if it is found
-int row_number = -1;    //-1 -> Not found on any row          //any other no. if found 
+int row_number = -1; //-1 -> Not found on any row          //any other no. if found
 
 enum editorKey
 {
@@ -439,7 +439,8 @@ void editorSave()
   quit_flag = 1;
 }
 
-void changehead(char filename[1000]){
+void changehead(char filename[1000])
+{
   FILE *fptr;
   fptr = fopen(filename, "r");
   if (fptr == NULL)
@@ -968,13 +969,13 @@ void rabinKarp(char *text, char *pattern)
   {
     if (hash_of_pattern == get_hash(i, i + m - 1))
     {
-      rk=1;
-      //editorSetStatusMessage("i am here");
-      position=i;
+      rk = 1;
+      // editorSetStatusMessage("i am here");
+      position = i;
       return;
     }
   }
-  //editorSetStatusMessage("Not Found");
+  // editorSetStatusMessage("Not Found");
 }
 
 void editorFind()
@@ -983,22 +984,26 @@ void editorFind()
   if (query == NULL)
     return;
   struct ll *rowline = temphead;
-  editorSetStatusMessage("%s-%s",query,rowline->data);
-  rabinKarp(query,rowline->data);
-  //rabinKarp(query,rowline->data);
-  int i=0;
-  while (rowline != NULL && position==-1)
+  editorSetStatusMessage("%s-%s", query, rowline->data);
+  rabinKarp(query, rowline->data);
+  // rabinKarp(query,rowline->data);
+  int i = 0;
+  while (rowline != NULL && position == -1)
   {
-      rabinKarp(rowline->data,query);
-      i++;
-      rowline = rowline->next;
+    rabinKarp(rowline->data, query);
+    i++;
+    rowline = rowline->next;
   }
-  if(rk==1){
-      row_number=i;
-      editorSetStatusMessage("FOUND!! at %d row and %d position",row_number,position);
+  if (rk == 1)
+  {
+    row_number = i;
+    E.cy = row_number - 1;
+    E.cx = position;
+    editorSetStatusMessage("FOUND!! at %d row and %d position", row_number, position);
   }
-  else{
-      editorSetStatusMessage("NOT FOUND!!");
+  else
+  {
+    editorSetStatusMessage("NOT FOUND!!");
   }
   // while(rowline!=NULL){
   //   if(find_flag==0){
@@ -1093,13 +1098,15 @@ int main()
       }
       return 0;
     }
-    else{
+    else
+    {
       printf("File already exists!");
       fclose(fp);
     }
   }
-  else{
-      exit(0);
+  else
+  {
+    exit(0);
   }
   return 0;
 }
