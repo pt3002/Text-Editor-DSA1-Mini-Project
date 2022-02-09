@@ -8,7 +8,7 @@ This text editor is implemented using C language. This project has been built as
 <a href="https://github.com/pt3002">112003114 - Prerna Tulsiani</a>
 
 # Working of Text Editor
-![flowchart1](https://user-images.githubusercontent.com/87142754/152912720-62214239-ebae-4218-925a-1327e6de65f7.png)
+![working_flowchart](https://user-images.githubusercontent.com/87142754/153125478-1eb791bc-86d5-4066-a12d-4ebee4e0184d.svg)
 
 # Features of Text Editor
 ![Features_flowchart](https://user-images.githubusercontent.com/87142754/153118045-ac857551-70a6-4ce4-a93a-53f71d3d894e.png)
