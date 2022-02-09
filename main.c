@@ -980,6 +980,10 @@ void rabinKarp(char *text, char *pattern)
 
 void editorFind()
 {
+  pw = calloc(N, sizeof(int));
+  inv = calloc(N, sizeof(int));
+  has = calloc(N, sizeof(int));
+  precal();
   char *query = editorPrompt("Search: %s (+ to cancel)");
   if (query == NULL)
     return;
@@ -1000,6 +1004,9 @@ void editorFind()
     E.cy = row_number - 1;
     E.cx = position;
     editorSetStatusMessage("FOUND!! at %d row and %d position", row_number, position);
+    rk=0;
+    position=-1;
+    row_number=-1;
   }
   else
   {
@@ -1038,10 +1045,10 @@ void initEditor()
 
 int main()
 {
-  pw = calloc(N, sizeof(int));
-  inv = calloc(N, sizeof(int));
-  has = calloc(N, sizeof(int));
-  precal();
+  // pw = calloc(N, sizeof(int));
+  // inv = calloc(N, sizeof(int));
+  // has = calloc(N, sizeof(int));
+  // precal();
 
   welcome_message();
   int code;
