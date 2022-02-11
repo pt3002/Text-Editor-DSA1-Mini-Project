@@ -15,21 +15,6 @@
 //-------------------------------------------------------------------------------------------------------------------------------------------//
 
 /**Defining all structures and enums**/
-
-//append buffer struct
-struct abuf
-{
-     char *b;
-     int len;
-};
-
-//linked list struct for storing all rows
-struct ll
-{
-     struct ll *next;
-     char data[1000];
-};
-
 //struct for storing a row 
 typedef struct row
 {
@@ -58,6 +43,20 @@ struct editorConfig
      char statusmsg[80];
      time_t statusmsg_time;
 } E;
+
+//append buffer struct
+struct abuf
+{
+     char *b;
+     int len;
+};
+
+//linked list struct for storing all rows
+struct ll
+{
+     struct ll *next;
+     char data[1000];
+};
 
 //enum for keys
 enum editorKey
@@ -116,6 +115,7 @@ int get_hash(int x, int y);
 int final_hash(char *s);
 void rabinKarp(char *text, char *pattern);
 void changehead(char filename[1000]);
+void abAppend(struct abuf *ab, const char *s, int len);
 
 /**Function Definition ends**/
 
@@ -123,9 +123,9 @@ void changehead(char filename[1000]);
 
 /**Defining all constants**/
 
-#define PRATIK_PATIL_VERSION "104"
+#define TEXT_EDITOR_VERSION "0.1"
 #define CTRL_KEY(k) ((k)&0x1f)
-#define KILO_TAB_STOP 8
+#define TAB_STOP 8
 #define ABUF_INIT \
   {               \
     NULL, 0       \
@@ -155,7 +155,43 @@ int row_number = -1;     //-1 -> Not found on any row          //any other no. i
 
 //-------------------------------------------------------------------------------------------------------------------------------------------//
 
-/**Functions for starting the editor**/
+/**Starting Message function**/
+
+void welcome_message()
+{
+     printf("\n");
+     printf("\t\t\t\t\t\t\t  Welcome to PRATIK'S TEXT EDITOR ! \n\n");
+     printf("\t\t\t\t\t\t\t    Please see codes given below\n");
+     printf("\n");
+     printf("\t\t\t\t -------------------------------------------------------------------------------------- \n");
+     printf("\t\t\t\t|                            |                            |                            |\n");
+     printf("\t\t\t\t|");
+     printf("    OPEN AN EXISTING FILE   ");
+     printf("|");
+     printf("     CREATE A NEW FILE      ");
+     printf("|");
+     printf("         TO EXIT            ");
+     printf("|\n");
+     printf("\t\t\t\t|                            |                            |                            |\n");
+     printf("\t\t\t\t|--------------------------------------------------------------------------------------|\n");
+     printf("\t\t\t\t|                            |                            |                            |\n");
+     printf("\t\t\t\t|");
+     printf("             1              ");
+     printf("|");
+     printf("             2              ");
+     printf("|");
+     printf("             3              ");
+     printf("|\n");
+     printf("\t\t\t\t|                            |                            |                            |\n");
+     printf("\t\t\t\t -------------------------------------------------------------------------------------- \n");
+     printf("\n\n");
+}
+
+/**Starting Message function ends**/
+
+//-------------------------------------------------------------------------------------------------------------------------------------------//
+
+/**Functions for setting up the terminal**/
 
 void die(const char *s)
 {
@@ -210,43 +246,7 @@ int getWindowSize(int *rows, int *cols)
      }
 }
 
-/**Functions for starting the editor ends**/
-
-//-------------------------------------------------------------------------------------------------------------------------------------------//
-
-/**Starting Message function**/
-
-void welcome_message()
-{
-     printf("\n");
-     printf("\t\t\t\t\t\t\t  Welcome to PRATIK'S TEXT EDITOR ! \n\n");
-     printf("\t\t\t\t\t\t\t    Please see codes given below\n");
-     printf("\n");
-     printf("\t\t\t\t -------------------------------------------------------------------------------------- \n");
-     printf("\t\t\t\t|                            |                            |                            |\n");
-     printf("\t\t\t\t|");
-     printf("    OPEN AN EXISTING FILE   ");
-     printf("|");
-     printf("     CREATE A NEW FILE      ");
-     printf("|");
-     printf("         TO EXIT            ");
-     printf("|\n");
-     printf("\t\t\t\t|                            |                            |                            |\n");
-     printf("\t\t\t\t|--------------------------------------------------------------------------------------|\n");
-     printf("\t\t\t\t|                            |                            |                            |\n");
-     printf("\t\t\t\t|");
-     printf("             1              ");
-     printf("|");
-     printf("             2              ");
-     printf("|");
-     printf("             3              ");
-     printf("|\n");
-     printf("\t\t\t\t|                            |                            |                            |\n");
-     printf("\t\t\t\t -------------------------------------------------------------------------------------- \n");
-     printf("\n\n");
-}
-
-/**Starting Message function ends**/
+/**Functions for setting up the terminal ends**/
 
 //-------------------------------------------------------------------------------------------------------------------------------------------//
 
@@ -359,54 +359,170 @@ void changehead(char filename[1000])
 
 //-------------------------------------------------------------------------------------------------------------------------------------------//
 
-/**Function for saving file**/
-
-void editorSave()
+/**Setting up the Editor**/
+void editorOpen(struct ll *head)
 {
-     if (E.filename == NULL)
+     while (head != NULL)
      {
-          return;
+          editorAppendRow(head->data, strlen(head->data));
+          head = head->next;
+     }
+}
+
+//Editor Read Key Function
+int editorReadKey()
+{
+     int r;
+     char c;
+     while ((r = read(STDIN_FILENO, &c, 1)) != 1)
+     {
+          if (r == -1 && errno != EAGAIN)
+          {
+               die("read");
+          }
+     }
+
+     if (c == '\x1b')
+     {
+          char seq[3];
+          if (read(STDIN_FILENO, &seq[0], 1) != 1)
+          {
+               return '\x1b';
+          }
+          if (read(STDIN_FILENO, &seq[1], 1) != 1)
+          {
+               return '\x1b';
+          }
+          if (seq[0] == '[')
+          {
+               switch (seq[1])
+               {
+                    case 'A':
+                         return ARROW_UP;
+
+                    case 'B':
+                         return ARROW_DOWN;
+
+                    case 'C':
+                         return ARROW_RIGHT;
+                         
+                    case 'D':
+                         return ARROW_LEFT;
+               }
+          }
+          return '\x1b';
      }
      else
      {
-          struct ll *line1;
-          line1 = NULL;
-          int n = E.no_of_rows;
-          int i = 0;
-          int len;
-          char s[1000];
-          char filename[1000];
-          while (i < n)
-          {
-               strcpy(s, E.row[i].chars);
-               line1 = createll(line1, s);
-               i++;
-          }
-          strcpy(filename, E.filename);
-          saving_to_file(line1, filename);
-          changehead(E.filename);
+          return c;
      }
-     dirty_flag = 100;
-     quit_flag = 1;
 }
 
-void saving_to_file(struct ll *head, char filename[1000])
+//Key Press Function
+void editorKeypress()
 {
-     FILE *fp = fopen(filename, "w");
-     while (head != NULL)
+     int c = editorReadKey();
+     switch (c)
      {
-          fprintf(fp, "%s\n", head->data);
-          head = head->next;
+          case '\r':
+               editorInsertNewline();
+               break;
+
+          case CTRL_KEY('f'):
+               editorFind();
+               break;
+
+          case CTRL_KEY('h'):
+               help_flag = 1;
+               break;
+
+          case CTRL_KEY('s'):
+               editorSave();
+               break;
+
+          case CTRL_KEY('q'):
+               write(STDOUT_FILENO, "\x1b[2J", 4);
+               write(STDOUT_FILENO, "\x1b[H", 3);
+               if (quit_flag == 1)
+               {
+                    exit(0);
+               }
+               else
+               {
+                    dirty_flag = 200;
+               }
+               break;
+
+          case BACKSPACE:
+               editorDelChar();
+               break;
+
+          case ARROW_UP:
+          case ARROW_DOWN:
+          case ARROW_LEFT:
+          case ARROW_RIGHT:
+               editorMoveCursor(c);
+               break;
+
+          default:
+               editorInsertChar(c);
+               break;
      }
-     fclose(fp);
 }
 
-/**Function for saving file ends**/
+//editor move cursor operation
+void editorMoveCursor(int key)
+{
+     switch (key)
+     {
+          case ARROW_LEFT:
+               if (E.cx != 0)
+               {
+                    E.cx--;
+               }
+               break;
+
+          case ARROW_RIGHT:
+               if (E.cx != E.screencols - 1)
+               {
+                    E.cx++;
+               }
+               break;
+
+          case ARROW_UP:
+               if (E.cy != 0)
+               {
+                    E.cy--;
+               }
+               break;
+
+          case ARROW_DOWN:
+               if (E.cy != E.screenrows - 1)
+               {
+                    E.cy++;
+               }
+               break;
+     }
+}
+
+void editorScroll()
+{
+     if (E.cy < E.rowoff)
+     {
+          E.rowoff = E.cy;
+     }
+     if (E.cy >= E.rowoff + E.screenrows)
+     {
+          E.rowoff = E.cy - E.screenrows + 1;
+     }
+}
+
+/**Setting up the Editor Completed**/
 
 //-------------------------------------------------------------------------------------------------------------------------------------------//
 
+//Status Bar shows the number of lines written
 /**Function for drawing status bar**/
-
 void editorDrawStatusBar(struct abuf *ab)
 {
      //Help status bar
@@ -534,33 +650,7 @@ void editorDrawStatusBar(struct abuf *ab)
      }
 }
 
-/**Function for drawing status bar ends**/
-
-//-------------------------------------------------------------------------------------------------------------------------------------------//
-
-/**Editor Operations**/
-
-void editorOpen(struct ll *head)
-{
-     while (head != NULL)
-     {
-          editorAppendRow(head->data, strlen(head->data));
-          head = head->next;
-     }
-}
-
-void editorScroll()
-{
-     if (E.cy < E.rowoff)
-     {
-          E.rowoff = E.cy;
-     }
-     if (E.cy >= E.rowoff + E.screenrows)
-     {
-          E.rowoff = E.cy - E.screenrows + 1;
-     }
-}
-
+/**Function for setting the message in status bar**/
 void editorSetStatusMessage(const char *fmt, ...)
 {
      va_list ap;
@@ -570,123 +660,195 @@ void editorSetStatusMessage(const char *fmt, ...)
      E.statusmsg_time = time(NULL);
 }
 
-//Init editor
-void initEditor()
+//-------------------------------------------------------------------------------------------------------------------------------------------//
+
+/**Writting in the Text Editor**/
+
+//Editor Rows function
+void editorRows(struct abuf *ab)
 {
-     E.cx = 0;
-     E.cy = 0;
-     E.no_of_rows = 0;
-     E.rowoff = 0;
-     E.statusmsg[0] = '\0';
-     E.statusmsg_time = 0;
-     if (getWindowSize(&E.screenrows, &E.screencols) == -1)
+     int y;
+     for (y = 0; y < E.screenrows; y++)
      {
-     die("getWindowSize");
-     }
-     E.screenrows -= 2;
-}
-
-//Key Press Function
-void editorKeypress()
-{
-     int c = editorReadKey();
-     switch (c)
-     {
-          case '\r':
-               editorInsertNewline();
-               break;
-
-          case CTRL_KEY('f'):
-               editorFind();
-               break;
-
-          case CTRL_KEY('h'):
-               help_flag = 1;
-               break;
-
-          case CTRL_KEY('s'):
-               editorSave();
-               break;
-
-          case CTRL_KEY('q'):
-               write(STDOUT_FILENO, "\x1b[2J", 4);
-               write(STDOUT_FILENO, "\x1b[H", 3);
-               if (quit_flag == 1)
+          int filerow = y + E.rowoff;
+          if (filerow >= E.no_of_rows)
+          {
+               if (E.no_of_rows == 0 && y == E.screenrows / 3)
                {
-                    exit(0);
+                    char welcome[80];
+                    int welcomelen = snprintf(welcome, sizeof(welcome), "Welcome To Text Editor %s", TEXT_EDITOR_VERSION);
+                    if (welcomelen > E.screencols)
+                    {
+                         welcomelen = E.screencols;
+                    }
+                    int padding = (E.screencols - welcomelen) / 2;
+                    if (padding)
+                    {
+                         abAppend(ab, "~", 1);
+                         padding--;
+                    }
+                    while (padding--)
+                    {
+                         abAppend(ab, " ", 1);
+                    }
+                    abAppend(ab, welcome, welcomelen);
                }
                else
                {
-                    dirty_flag = 200;
+                    abAppend(ab, "~", 1);
                }
-               break;
-
-          case BACKSPACE:
-               editorDelChar();
-               break;
-
-          case ARROW_UP:
-          case ARROW_DOWN:
-          case ARROW_LEFT:
-          case ARROW_RIGHT:
-               editorMoveCursor(c);
-               break;
-
-          default:
-               editorInsertChar(c);
-               break;
+          }
+          else
+          {
+               int len = E.row[filerow].size;
+               if (len > E.screencols)
+               {
+                    len = E.screencols;
+               }
+               abAppend(ab, E.row[filerow].chars, len);
+          }
+          abAppend(ab, "\x1b[K", 3);
+          abAppend(ab, "\r\n", 2);
      }
 }
 
-//Editor Read Key Function
-int editorReadKey()
+void editorUpdateRow(row *row)
 {
-     int r;
-     char c;
-     while ((r = read(STDIN_FILENO, &c, 1)) != 1)
+     free(row->render);
+     row->render = malloc(row->size + 1);
+     int j;
+     int idx = 0;
+     for (j = 0; j < row->size; j++)
      {
-          if (r == -1 && errno != EAGAIN)
-          {
-               die("read");
-          }
+          row->render[idx++] = row->chars[j];
      }
+     row->render[idx] = '\0';
+     row->rsize = idx;
+}
 
-     if (c == '\x1b')
+void editorInsertRow(int at, char *s, size_t len)
+{
+     if (at < 0 || at > E.no_of_rows)
+          return;
+     E.row = realloc(E.row, sizeof(row) * (E.no_of_rows + 1));
+     memmove(&E.row[at + 1], &E.row[at], sizeof(row) * (E.no_of_rows - at));
+
+     E.row[at].size = len;
+     E.row[at].chars = malloc(len + 1);
+     memcpy(E.row[at].chars, s, len);
+     E.row[at].chars[len] = '\0';
+     E.row[at].rsize = 0;
+     E.row[at].render = NULL;
+     editorUpdateRow(&E.row[at]);
+     E.no_of_rows++;
+     dirty_flag = 0;
+}
+
+void editorAppendRow(char *s, size_t len)
+{
+     E.row = realloc(E.row, sizeof(row) * (E.no_of_rows + 1));
+     int at = E.no_of_rows;
+     E.row[at].size = len;
+     E.row[at].chars = malloc(len + 1);
+     memcpy(E.row[at].chars, s, len);
+     E.row[at].chars[len] = '\0';
+     E.no_of_rows++;
+
+     E.row[at].rsize = 0;
+     E.row[at].render = NULL;
+
+}
+
+void editorInsertNewline()
+{
+     if (E.cx == 0)
      {
-          char seq[3];
-          if (read(STDIN_FILENO, &seq[0], 1) != 1)
-          {
-               return '\x1b';
-          }
-          if (read(STDIN_FILENO, &seq[1], 1) != 1)
-          {
-               return '\x1b';
-          }
-          if (seq[0] == '[')
-          {
-               switch (seq[1])
-               {
-                    case 'A':
-                         return ARROW_UP;
-
-                    case 'B':
-                         return ARROW_DOWN;
-
-                    case 'C':
-                         return ARROW_RIGHT;
-                         
-                    case 'D':
-                         return ARROW_LEFT;
-               }
-          }
-          return '\x1b';
+          editorInsertRow(E.cy, "", 0);
      }
      else
      {
-          return c;
+          row *row = &E.row[E.cy];
+          editorInsertRow(E.cy + 1, &row->chars[E.cx], row->size - E.cx);
+          row = &E.row[E.cy];
+          row->size = E.cx;
+          row->chars[row->size] = '\0';
+          editorUpdateRow(row);
+     }
+     E.cy++;
+     E.cx = 0;
+}
+
+void editorInsertChar(int c)
+{
+     if (E.cy == E.no_of_rows)
+     {
+          editorInsertRow(E.no_of_rows, "", 0);
+     }
+     editorRowInsertChar(&E.row[E.cy], E.cx, c);
+     E.cx++;
+     quit_flag = 0;
+}
+
+void editorRowInsertChar(row *row, int at, int c)
+{
+     if (at < 0 || at > row->size)
+     {
+          at = row->size;
+     }
+     row->chars = realloc(row->chars, row->size + 2);
+     memmove(&row->chars[at + 1], &row->chars[at], row->size - at + 1);
+     row->size++;
+     row->chars[at] = c;
+}
+
+//-------------------------------------------------------------------------------------------------------------------------------------------//
+
+//Deleting a character
+void editorRowDelChar(row *row, int at)
+{
+     if (at < 0 || at >= row->size)
+     {
+          return;
+     }
+     memmove(&row->chars[at], &row->chars[at + 1], row->size - at);
+     row->size--;
+     editorUpdateRow(row);
+}
+
+void editorDelChar()
+{
+     if (E.cy == E.no_of_rows)
+     return;
+     row *row = &E.row[E.cy];
+     if (E.cx > 0)
+     {
+          editorRowDelChar(row, E.cx - 1);
+          E.cx--;
      }
 }
 
+int editorRowRxToCx(row *erow, int rx)
+{
+     int cur_rx = 0;
+     int cx;
+     for (cx = 0; cx < erow->size; cx++)
+     {
+          if (erow->chars[cx] == '\t')
+          {
+               cur_rx += (TAB_STOP - 1) - (cur_rx % TAB_STOP);
+          }
+          cur_rx++;
+          if (cur_rx > rx)
+          {
+               return cx;
+          }
+     }
+     return cx;
+}
+
+//-------------------------------------------------------------------------------------------------------------------------------------------//
+
+/**Searching Functions**/
 //Editor Prompt Function
 char *editorPrompt(char *prompt)
 {
@@ -725,42 +887,7 @@ char *editorPrompt(char *prompt)
      }
 }
 
-//editor move cursor operation
-void editorMoveCursor(int key)
-{
-     switch (key)
-     {
-          case ARROW_LEFT:
-               if (E.cx != 0)
-               {
-                    E.cx--;
-               }
-               break;
-
-          case ARROW_RIGHT:
-               if (E.cx != E.screencols - 1)
-               {
-                    E.cx++;
-               }
-               break;
-
-          case ARROW_UP:
-               if (E.cy != 0)
-               {
-                    E.cy--;
-               }
-               break;
-
-          case ARROW_DOWN:
-               if (E.cy != E.screenrows - 1)
-               {
-                    E.cy++;
-               }
-               break;
-     }
-}
-
-//To draw message bar in editor
+//To draw message bar in editor where we take search input
 void editorDrawMessageBar(struct abuf *ab)
 {
      abAppend(ab, "\x1b[K", 3);
@@ -775,247 +902,62 @@ void editorDrawMessageBar(struct abuf *ab)
      }
 }
 
-//Editor Rows function
-void editorRows(struct abuf *ab)
+//Find Function
+void editorFind()
 {
-     int y;
-     for (y = 0; y < E.screenrows; y++)
-     {
-          int filerow = y + E.rowoff;
-          if (filerow >= E.no_of_rows)
-          {
-               if (E.no_of_rows == 0 && y == E.screenrows / 3)
-               {
-                    char welcome[80];
-                    int welcomelen = snprintf(welcome, sizeof(welcome), "Desperate times desperate measures %s", PRATIK_PATIL_VERSION);
-                    if (welcomelen > E.screencols)
-                    {
-                         welcomelen = E.screencols;
-                    }
-                    int padding = (E.screencols - welcomelen) / 2;
-                    if (padding)
-                    {
-                         abAppend(ab, "~", 1);
-                         padding--;
-                    }
-                    while (padding--)
-                    {
-                         abAppend(ab, " ", 1);
-                    }
-                    abAppend(ab, welcome, welcomelen);
-               }
-               else
-               {
-                    abAppend(ab, "~", 1);
-               }
-          }
-          else
-          {
-               int len = E.row[filerow].size;
-               if (len > E.screencols)
-               {
-                    len = E.screencols;
-               }
-               abAppend(ab, E.row[filerow].chars, len);
-          }
-          abAppend(ab, "\x1b[K", 3);
-          abAppend(ab, "\r\n", 2);
-     }
-}
-
-/**Editor Operations ends**/
-
-//-------------------------------------------------------------------------------------------------------------------------------------------//
-
-/**Editor Refresh Function**/
-
-void refreshScreen()
-{
-     editorScroll();
-
-     struct abuf ab = ABUF_INIT;
-
-     abAppend(&ab, "\x1b[?25l", 6);
-     abAppend(&ab, "\x1b[H", 3);
-
-     editorRows(&ab);
-     editorDrawStatusBar(&ab);
-     editorDrawMessageBar(&ab);
-
-     char buf[32];
-     snprintf(buf, sizeof(buf), "\x1b[%d;%dH", (E.cy - E.rowoff) + 1, E.cx + 1);
-     abAppend(&ab, buf, strlen(buf));
-
-     abAppend(&ab, "\x1b[?25h", 6);
-     write(STDOUT_FILENO, ab.b, ab.len);
-     abFree(&ab);
-}
-
-/**Editor Refresh function ends**/
-
-//-------------------------------------------------------------------------------------------------------------------------------------------//
-
-/**Writing in editor functions**/
-
-void editorUpdateRow(row *row)
-{
-     free(row->render);
-     row->render = malloc(row->size + 1);
-     int j;
-     int idx = 0;
-     for (j = 0; j < row->size; j++)
-     {
-          row->render[idx++] = row->chars[j];
-     }
-     row->render[idx] = '\0';
-     row->rsize = idx;
-}
-
-void editorRowDelChar(row *row, int at)
-{
-     if (at < 0 || at >= row->size)
+     pw = calloc(N, sizeof(int));
+     inv = calloc(N, sizeof(int));
+     has = calloc(N, sizeof(int));
+     precal();
+     char *query = editorPrompt("Search: %s (+ to cancel)");
+     if (query == NULL)
      {
           return;
      }
-     memmove(&row->chars[at], &row->chars[at + 1], row->size - at);
-     row->size--;
-     editorUpdateRow(row);
-}
-
-void editorDelChar()
-{
-     if (E.cy == E.no_of_rows)
-     return;
-     row *row = &E.row[E.cy];
-     if (E.cx > 0)
+     struct ll *rowline = temphead;
+     editorSetStatusMessage("%s-%s", query, rowline->data);
+     rabinKarp(query, rowline->data);
+     int i = 0;
+     while (rowline != NULL && position == -1)
      {
-          editorRowDelChar(row, E.cx - 1);
-          E.cx--;
+          rabinKarp(rowline->data, query);
+          i++;
+          rowline = rowline->next;
      }
-}
-
-void editorAppendRow(char *s, size_t len)
-{
-     E.row = realloc(E.row, sizeof(row) * (E.no_of_rows + 1));
-     int at = E.no_of_rows;
-     E.row[at].size = len;
-     E.row[at].chars = malloc(len + 1);
-     memcpy(E.row[at].chars, s, len);
-     E.row[at].chars[len] = '\0';
-     E.no_of_rows++;
-
-     E.row[at].rsize = 0;
-     E.row[at].render = NULL;
-
-}
-
-void editorRowInsertChar(row *row, int at, int c)
-{
-     if (at < 0 || at > row->size)
+     if (rk == 1)
      {
-          at = row->size;
-     }
-     row->chars = realloc(row->chars, row->size + 2);
-     memmove(&row->chars[at + 1], &row->chars[at], row->size - at + 1);
-     row->size++;
-     row->chars[at] = c;
-}
-
-void editorInsertChar(int c)
-{
-     if (E.cy == E.no_of_rows)
-     {
-          editorInsertRow(E.no_of_rows, "", 0);
-     }
-     editorRowInsertChar(&E.row[E.cy], E.cx, c);
-     E.cx++;
-     quit_flag = 0;
-}
-
-void editorInsertNewline()
-{
-     if (E.cx == 0)
-     {
-          editorInsertRow(E.cy, "", 0);
+          row_number = i;
+          E.cy = row_number - 1;
+          E.cx = position;
+          editorSetStatusMessage("FOUND!! at %d row and %d position", row_number, position);
+          rk=0;
+          position=-1;
+          row_number=-1;
      }
      else
      {
-          row *row = &E.row[E.cy];
-          editorInsertRow(E.cy + 1, &row->chars[E.cx], row->size - E.cx);
-          row = &E.row[E.cy];
-          row->size = E.cx;
-          row->chars[row->size] = '\0';
-          editorUpdateRow(row);
+          editorSetStatusMessage("NOT FOUND!!");
      }
-     E.cy++;
-     E.cx = 0;
+     free(query);
 }
 
-void editorInsertRow(int at, char *s, size_t len)
+//Rabin Karp Algo
+void rabinKarp(char *text, char *pattern)
 {
-     if (at < 0 || at > E.no_of_rows)
-          return;
-     E.row = realloc(E.row, sizeof(row) * (E.no_of_rows + 1));
-     memmove(&E.row[at + 1], &E.row[at], sizeof(row) * (E.no_of_rows - at));
-
-     E.row[at].size = len;
-     E.row[at].chars = malloc(len + 1);
-     memcpy(E.row[at].chars, s, len);
-     E.row[at].chars[len] = '\0';
-     E.row[at].rsize = 0;
-     E.row[at].render = NULL;
-     editorUpdateRow(&E.row[at]);
-     E.no_of_rows++;
-     dirty_flag = 0;
-}
-
-int editorRowRxToCx(row *erow, int rx)
-{
-     int cur_rx = 0;
-     int cx;
-     for (cx = 0; cx < erow->size; cx++)
+     int hash_of_pattern = final_hash(pattern);
+     int n = strlen(text);
+     int m = strlen(pattern);
+     build_hash(text);
+     for (int i = 0; i < n - m + 1; i++)
      {
-          if (erow->chars[cx] == '\t')
+          if (hash_of_pattern == get_hash(i, i + m - 1))
           {
-               cur_rx += (KILO_TAB_STOP - 1) - (cur_rx % KILO_TAB_STOP);
-          }
-          cur_rx++;
-          if (cur_rx > rx)
-          {
-               return cx;
+               rk = 1;
+               position = i;
+               return;
           }
      }
-     return cx;
 }
-
-/**Writing in editor functions**/
-
-//-------------------------------------------------------------------------------------------------------------------------------------------//
-
-/**Buffer functions**/
-
-void abAppend(struct abuf *ab, const char *s, int len)
-{
-     char *new = realloc(ab->b, ab->len + len);
-     if (new == NULL)
-     {
-          return;
-     }
-     memcpy(&new[ab->len], s, len);
-     ab->b = new;
-     ab->len += len;
-}
-
-void abFree(struct abuf *ab)
-{
-     free(ab->b);
-}
-
-/**Buffer functions ends**/
-
-//-------------------------------------------------------------------------------------------------------------------------------------------//
-
-/**Searching Functions**/
 
 int add(int a, int b, int mod)
 {
@@ -1068,6 +1010,7 @@ void precal()
      }
 }
 
+//Building Hashing
 void build_hash(char *s)
 {
      int n = strlen(s);
@@ -1095,64 +1038,119 @@ int final_hash(char *s)
      return res;
 }
 
-void rabinKarp(char *text, char *pattern)
-{
-     int hash_of_pattern = final_hash(pattern);
-     int n = strlen(text);
-     int m = strlen(pattern);
-     build_hash(text);
-     for (int i = 0; i < n - m + 1; i++)
-     {
-          if (hash_of_pattern == get_hash(i, i + m - 1))
-          {
-               rk = 1;
-               position = i;
-               return;
-          }
-     }
-}
-
-void editorFind()
-{
-     pw = calloc(N, sizeof(int));
-     inv = calloc(N, sizeof(int));
-     has = calloc(N, sizeof(int));
-     precal();
-     char *query = editorPrompt("Search: %s (+ to cancel)");
-     if (query == NULL)
-     {
-          return;
-     }
-     struct ll *rowline = temphead;
-     editorSetStatusMessage("%s-%s", query, rowline->data);
-     rabinKarp(query, rowline->data);
-     int i = 0;
-     while (rowline != NULL && position == -1)
-     {
-          rabinKarp(rowline->data, query);
-          i++;
-          rowline = rowline->next;
-     }
-     if (rk == 1)
-     {
-          row_number = i;
-          E.cy = row_number - 1;
-          E.cx = position;
-          editorSetStatusMessage("FOUND!! at %d row and %d position", row_number, position);
-          rk=0;
-          position=-1;
-          row_number=-1;
-     }
-     else
-     {
-          editorSetStatusMessage("NOT FOUND!!");
-     }
-     free(query);
-}
-
 /**Searching functions ends**/
 
 //-------------------------------------------------------------------------------------------------------------------------------------------//
+
+/**Function for saving file**/
+
+void editorSave()
+{
+     if (E.filename == NULL)
+     {
+          return;
+     }
+     else
+     {
+          struct ll *line1;
+          line1 = NULL;
+          int n = E.no_of_rows;
+          int i = 0;
+          int len;
+          char s[1000];
+          char filename[1000];
+          while (i < n)
+          {
+               strcpy(s, E.row[i].chars);
+               line1 = createll(line1, s);
+               i++;
+          }
+          strcpy(filename, E.filename);
+          saving_to_file(line1, filename);
+          changehead(E.filename);
+     }
+     dirty_flag = 100;
+     quit_flag = 1;
+}
+
+void saving_to_file(struct ll *head, char filename[1000])
+{
+     FILE *fp = fopen(filename, "w");
+     while (head != NULL)
+     {
+          fprintf(fp, "%s\n", head->data);
+          head = head->next;
+     }
+     fclose(fp);
+}
+
+/**Function for saving file ends**/
+
+//-------------------------------------------------------------------------------------------------------------------------------------------//
+
+/**Buffer functions**/
+
+void abAppend(struct abuf *ab, const char *s, int len)
+{
+     char *new = realloc(ab->b, ab->len + len);
+     if (new == NULL)
+     {
+          return;
+     }
+     memcpy(&new[ab->len], s, len);
+     ab->b = new;
+     ab->len += len;
+}
+
+void abFree(struct abuf *ab)
+{
+     free(ab->b);
+}
+
+/**Buffer functions ends**/
+
+//-------------------------------------------------------------------------------------------------------------------------------------------//
+
+/**Editor Refresh Function**/
+void refreshScreen()
+{
+     editorScroll();
+
+     struct abuf ab = ABUF_INIT;
+
+     abAppend(&ab, "\x1b[?25l", 6);
+     abAppend(&ab, "\x1b[H", 3);
+
+     editorRows(&ab);
+     editorDrawStatusBar(&ab);
+     editorDrawMessageBar(&ab);
+
+     char buf[32];
+     snprintf(buf, sizeof(buf), "\x1b[%d;%dH", (E.cy - E.rowoff) + 1, E.cx + 1);
+     abAppend(&ab, buf, strlen(buf));
+
+     abAppend(&ab, "\x1b[?25h", 6);
+     write(STDOUT_FILENO, ab.b, ab.len);
+     abFree(&ab);
+}
+
+/**Editor Refresh function ends**/
+
+//Init editor
+void initEditor()
+{
+     E.cx = 0;
+     E.cy = 0;
+     E.no_of_rows = 0;
+     E.rowoff = 0;
+     E.statusmsg[0] = '\0';
+     E.statusmsg_time = 0;
+     if (getWindowSize(&E.screenrows, &E.screencols) == -1)
+     {
+     die("getWindowSize");
+     }
+     E.screenrows -= 2;
+}
 
 /**Main function**/
 
