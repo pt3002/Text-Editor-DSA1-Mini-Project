@@ -49,7 +49,7 @@ gcc -o main main.c
 5. Saved Successfully
 ![Saved Successfully](https://user-images.githubusercontent.com/87142754/153142460-4021dd98-4c6b-4884-b256-8c21381b4795.png)
 
-6. File written on disk
+6. File written on disk.
 ![File Written on Disk](https://user-images.githubusercontent.com/87142754/153142519-b5eeaa08-7391-4519-8cc0-68c1a34c6d12.png)
 
 
