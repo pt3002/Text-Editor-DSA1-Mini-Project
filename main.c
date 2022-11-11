@@ -160,7 +160,7 @@ int row_number = -1;     //-1 -> Not found on any row          //any other no. i
 void welcome_message()
 {
      printf("\n");
-     printf("\t\t\t\t\t\t\t  Welcome to PRATIK'S TEXT EDITOR ! \n\n");
+     printf("\t\t\t\t\t\t\t  Welcome to TEXT EDITOR ! \n\n");
      printf("\t\t\t\t\t\t\t    Please see codes given below\n");
      printf("\n");
      printf("\t\t\t\t -------------------------------------------------------------------------------------- \n");
